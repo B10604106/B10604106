@@ -3,8 +3,8 @@
 姓名:王崧存 就讀學校:台灣科技大學  科系:材料科學與工程學系  年級:二
 ## week_1
  * School:  
-  1.learning how to used Github  
-  2.typing my reposities profile
+&nbsp &nbsp 1.learning how to used Github  
+&nbsp 2.typing my reposities profile
  * Home
 ## week_2
  * School
