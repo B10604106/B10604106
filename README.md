@@ -4,8 +4,7 @@
  * School:  
  1. learning how to used Github  
  2. typing my reposities profile
- 3. [123](https://b10604106.github.io/B10604106/123.html)
- * Home
+ 3. [123](https://github.com/B10604106/B10604106/tree/master/week1)
 ## week_2
  * School
  * Home
