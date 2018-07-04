@@ -4,7 +4,8 @@
  * School:  
  1. learning how to used Github  
  2. typing my reposities profile
- 3. [school work](https://github.com/B10604106/B10604106/tree/master/week1)
+ 3. [data](https://github.com/B10604106/B10604106/tree/master/week1)
+ 4. [website](https://b10604106.github.io/B10604106/week1/123.html)
  * Home
 ## week_2
  * School
