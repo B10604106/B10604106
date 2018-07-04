@@ -5,6 +5,7 @@
  1. learning how to used Github  
  2. typing my reposities profile
  3. [school work](https://github.com/B10604106/B10604106/tree/master/week1)
+ * Home
 ## week_2
  * School
  * Home
