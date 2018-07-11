@@ -6,12 +6,13 @@
  2. typing my reposities profile
  3. [data](https://github.com/B10604106/B10604106/tree/master/week1)
  4. [website](https://b10604106.github.io/B10604106/week1/123.html)
- * Home
+ * Home:
  1. learning [R 語言導論](https://www.datacamp.com/community/open-courses/r-%E8%AA%9E%E8%A8%80%E5%B0%8E%E8%AB%96)   
  2. learning [Intermediate R](https://www.datacamp.com/courses/intermediate-r)
  3. learning [Introduction to the tidyverse](https://www.datacamp.com/courses/introduction-to-the-tidyverse)
 ## week_2
- * School
+ * School:
+ 1. 圖一[trees](https://b10604106.github.io/B10604106/trees/trees.html)
  * Home
 ## week_3
  * School
