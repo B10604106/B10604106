@@ -12,10 +12,10 @@
  3. learning [Introduction to the tidyverse](https://www.datacamp.com/courses/introduction-to-the-tidyverse)
 ## week_2
  * School:
- 1. 圖一[trees](https://b10604106.github.io/B10604106/trees/trees.html)
- 2. 圖二[rock](https://b10604106.github.io/B10604106/rock/rock1.html)
- 3. 圖三[InsectSprays](https://b10604106.github.io/B10604106/InsectSprays/InsectSprays.html)
- 4. 圖三[ToothGrowth](https://b10604106.github.io/B10604106/ToothGrowth/ToothGrowth.html)
+ 1. 圖一[trees](https://b10604106.github.io/B10604106/week2/trees/trees.html)
+ 2. 圖二[rock](https://b10604106.github.io/B10604106/week2/rock/rock1.html)
+ 3. 圖三[InsectSprays](https://b10604106.github.io/B10604106/week2/InsectSprays/InsectSprays.html)
+ 4. 圖三[ToothGrowth](https://b10604106.github.io/B10604106/week2/ToothGrowth/ToothGrowth.html)
  * Home
 ## week_3
  * School
