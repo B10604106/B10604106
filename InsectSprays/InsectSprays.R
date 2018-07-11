@@ -1,0 +1,6 @@
+library(datasets)
+library(dplyr)
+library(ggplot2)
+ggplot(data = InsectSprays, aes( x = count)) + 
+  geom_bar(fill = "lightblue", colour = "black") 
+
