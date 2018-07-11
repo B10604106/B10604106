@@ -16,6 +16,7 @@
  2. 圖二[rock](https://b10604106.github.io/B10604106/week2/rock/rock1.html)
  3. 圖三[InsectSprays](https://b10604106.github.io/B10604106/week2/InsectSprays/InsectSprays.html)
  4. 圖三[ToothGrowth](https://b10604106.github.io/B10604106/week2/ToothGrowth/ToothGrowth.html)
+ 5. 文字雲[NBA](https://b10604106.github.io/B10604106/week2/cloud/cloud1.html)
  * Home
 ## week_3
  * School
