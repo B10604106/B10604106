@@ -14,7 +14,7 @@
  * School:
  1. 圖一[trees](https://b10604106.github.io/B10604106/trees/trees.html)
  2. 圖二[rock](https://b10604106.github.io/B10604106/rock/rock1.html)
- 3. 圖三[InsecSprays](https://b10604106.github.io/B10604106/InsecSprays/InsecSprays.html)
+ 3. 圖三[InsectSprays](https://b10604106.github.io/B10604106/InsectSprays/InsectSprays.html)
  * Home
 ## week_3
  * School
