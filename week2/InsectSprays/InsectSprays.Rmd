@@ -6,3 +6,7 @@ ggplot(data = InsectSprays, aes( x = count)) +
   geom_bar(fill = "lightblue", colour = "black") 
 
 ```
+
+```{r}
+str(InsectSprays)
+```
