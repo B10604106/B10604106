@@ -22,6 +22,19 @@ toSpace <- content_transformer(function(x, pattern) {
 }
 )
 docs <- tm_map(docs, toSpace, "※")
+docs <- tm_map(docs, toSpace, "去")
+docs <- tm_map(docs, toSpace, "覺得")
+docs <- tm_map(docs, toSpace, "自己")
+docs <- tm_map(docs, toSpace, "啦")
+docs <- tm_map(docs, toSpace, "可能")
+docs <- tm_map(docs, toSpace, "沒")
+docs <- tm_map(docs, toSpace, "嗎")
+docs <- tm_map(docs, toSpace, "跟")
+docs <- tm_map(docs, toSpace, "好")
+docs <- tm_map(docs, toSpace, "真")
+docs <- tm_map(docs, toSpace, "讓")
+docs <- tm_map(docs, toSpace, "說")
+docs <- tm_map(docs, toSpace, "很")
 docs <- tm_map(docs, toSpace, "◆")
 docs <- tm_map(docs, toSpace, "‧")
 docs <- tm_map(docs, toSpace, "就")
@@ -78,4 +91,4 @@ wordcloud(freqFrame$Var1,freqFrame$Freq,
           rot.per=.1, colors=brewer.pal(8, "Dark2"),
           ordered.colors=FALSE,use.r.layout=FALSE,
           fixed.asp=TRUE)
-
+#由文字雲的圖片可以知道，近期NBA版主要用字前幾名有火箭、球員、交易，另外假使只看隊伍名稱的話，馬刺、勇士、雷霆、魔術、騎士討論度較高，球員部分則有姆斯、可愛、餅皇，由這些字詞大致可以判斷出，哪幾位球員目前合約即將到期，也可以推斷出哪幾隊有可能進一步爭取。
