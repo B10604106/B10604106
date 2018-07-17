@@ -18,6 +18,10 @@
  4. 圖三[ToothGrowth](https://b10604106.github.io/B10604106/week2/ToothGrowth/ToothGrowth.html)
  5. 文字雲[NBA](https://b10604106.github.io/B10604106/week2/cloud/cloud1.html)
  * Home
+ 1. learning [Exploratory data analysis](https://www.datacamp.com/courses/exploratory-data-analysis)
+ 2. learning [Introduction to the tidyverse](https://www.datacamp.com/courses/introduction-to-the-tidyverse)
+ 3. learning [文字探勘之前處理與TF-IDF介紹](http://www.cc.ntu.edu.tw/chinese/epaper/0031/20141220_3103.html)
+ 4. learning [中文文本探勘初探：TF-IDF in R Language](http://mropengate.blogspot.com/2016/04/tf-idf-in-r-language.html)
 ## week_3
  * School
  * Home
