@@ -1,0 +1,362 @@
+---
+title: 'Exploring the Titanic Dataset'
+author: '原作者:Megan L. Risdal'
+
+output:
+  html_document:
+    number_sections: true
+    toc: true
+    fig_width: 7
+    fig_height: 4.5
+    theme: readable
+    highlight: tango
+---
+
+# 原作者的Introduction
+
+This is my first stab at a Kaggle script. I have chosen to work with the Titanic dataset after spending some time poking around on the site and looking at other scripts made by other Kagglers for inspiration. I will also focus on doing some illustrative data visualizations along the way. I'll then use `randomForest` to create a model predicting survival on the Titanic. I am new to machine learning and hoping to learn a lot, so feedback is very welcome! 
+
+There are three parts to my script as follows:
+
+* Feature engineering
+* Missing value imputation
+* Prediction!
+
+
+#首先用install.packages()在Console下載檔案，之後在用library讀取他們。
+## Load and check data
+```{r, message = FALSE}
+# Load packages
+library('ggplot2') # visualization
+library('ggthemes') # visualization
+library('scales') # visualization
+library('dplyr') # data manipulation
+library('mice') # imputation
+library('randomForest') # classification algorithm
+```
+
+Now that our packages are loaded, let's read in and take a peek at the data.
+
+#然後再用函數read.csv()找到我們train 跟 test的資料，並打他們用bind_rows合併成full，再用str()來確認full的檔案形式。
+```{r, message=FALSE, warning=FALSE}
+train <- read.csv('../week3/all/train.csv', stringsAsFactors = F)
+test  <- read.csv('../week3/all/test.csv', stringsAsFactors = F)
+
+full  <- bind_rows(train, test) # bind training & test data
+
+# check data
+str(full)
+```
+
+
+# Feature Engineering
+##之後來做一些特徵工程，來選取這份資料中比較有關連性的資料，首先原作者選擇先從名字下手，他用$將Name從full這個檔案中選取出來並用gsub()**刪掉姓氏跟名字**，只留下稱謂，放在**Title**欄位，再用table列表出來。
+
+##再來從table裡面找出比較少出現的稱謂並命名rare_title，並把其他Mr, Miss的用法用full$Title[full$Title == 'xxx']  <- 'Miss or Mrs'將其變回Mr, Miss.
+
+##再用table顯示，確認欄位正確。
+
+##然後用strsplit()將名字切割，讓他剩下surname，並用sapply迴圈跑完全部，nlevels則是可以拿來計算，取得因子的數量。paste則是將其串聯起來，cat則output結果。
+```{r, message=FALSE, warning=FALSE}
+# Grab title from passenger names
+full$Title <- gsub('(.*, )|(\\..*)', '', full$Name)
+
+# Show title counts by sex
+table(full$Sex, full$Title)
+
+# Titles with very low cell counts to be combined to "rare" level
+rare_title <- c('Dona', 'Lady', 'the Countess','Capt', 'Col', 'Don', 
+                'Dr', 'Major', 'Rev', 'Sir', 'Jonkheer')
+
+# Also reassign mlle, ms, and mme accordingly
+full$Title[full$Title == 'Mlle']        <- 'Miss' 
+full$Title[full$Title == 'Ms']          <- 'Miss'
+full$Title[full$Title == 'Mme']         <- 'Mrs' 
+full$Title[full$Title %in% rare_title]  <- 'Rare Title'
+
+# Show title counts by sex again
+table(full$Sex, full$Title)
+
+# Finally, grab surname from passenger name
+full$Surname <- sapply(full$Name,  
+                      function(x) strsplit(x, split = '[,.]')[[1]][1])
+```
+
+```{r results='asis'}
+cat(paste('We have <b>', nlevels(factor(full$Surname)), '</b> unique surnames.'))
+```
+
+## Do families sink or swim together?
+
+##而這裡我們要將家庭大小歸類出來，用$將他們家人及手足選取並相加在一起，用paste()將全部串起來。
+```{r}
+# Create a family size variable including the passenger themselves
+full$Fsize <- full$SibSp + full$Parch + 1
+
+# Create a family variable 
+full$Family <- paste(full$Surname, full$Fsize, sep='_')
+```
+
+##用ggplot2來畫圖表，設X軸等於Fsize,然後畫出家庭大小和生存率的關係。 
+
+```{r, message=FALSE, warning=FALSE}
+ggplot(full[1:891,], aes(x = Fsize, fill = factor(Survived))) +
+  geom_bar(stat='count', position='dodge') +
+  scale_x_continuous(breaks=c(1:11)) +
+  labs(x = 'Family Size') +
+  theme_few()
+```
+
+##然後將family size分組，有分只有一人的singleton，1<人數<5的small，人數>4的large，最後再用mosaic plot秀出Family Size by Survival。
+
+```{r}
+# Discretize family size
+full$FsizeD[full$Fsize == 1] <- 'singleton'
+full$FsizeD[full$Fsize < 5 & full$Fsize > 1] <- 'small'
+full$FsizeD[full$Fsize > 4] <- 'large'
+
+# Show family size by survival using a mosaic plot
+mosaicplot(table(full$FsizeD, full$Survived), main='Family Size by Survival', shade=TRUE)
+```
+
+
+## 試試看其他變數
+
+ **passenger cabin**裡面有關於**deck**的資料，可以將deck的資料分成A - F，但是因為資料有點稀疏，所以原作者並沒有繼續做下去，這裡作者也是先用strsplit打散甲板的編號，並用sapply迴圈跑完全部。
+
+```{r}
+# This variable appears to have a lot of missing values
+full$Cabin[1:28]
+
+# The first character is the deck. For example:
+strsplit(full$Cabin[2], NULL)[[1]]
+
+# Create a Deck variable. Get passenger deck A - F:
+full$Deck<-factor(sapply(full$Cabin, function(x) strsplit(x, NULL)[[1]][1]))
+```
+
+
+# Missingness
+
+在這邊作者嘗試復原一些丟失的資料，像是乘客62跟830的Embarkment缺失了，作者使用他們的票錢以及他們的登陸班次來推算，所以他先pipe full並用filter過濾出了他想要的資料，並用ggplot畫出fare跟factor之間的關係，作者從第一班以及價錢在80這兩點對比圖片，發現他們是從C embarked的，然後將資料補足。
+
+## Sensible value imputation
+
+```{r}
+# Passengers 62 and 830 are missing Embarkment
+full[c(62, 830), 'Embarked']
+```
+
+```{r results='asis'}
+cat(paste('We will infer their values for **embarkment** based on present data that we can imagine may be relevant: **passenger class** and **fare**. We see that they paid<b> $', full[c(62, 830), 'Fare'][[1]][1], '</b>and<b> $', full[c(62, 830), 'Fare'][[1]][2], '</b>respectively and their classes are<b>', full[c(62, 830), 'Pclass'][[1]][1], '</b>and<b>', full[c(62, 830), 'Pclass'][[1]][2], '</b>. So from where did they embark?'))
+```
+
+```{r, message=FALSE, warning=FALSE}
+# Get rid of our missing passenger IDs
+embark_fare <- full %>%
+  filter(PassengerId != 62 & PassengerId != 830)
+
+# Use ggplot2 to visualize embarkment, passenger class, & median fare
+ggplot(embark_fare, aes(x = Embarked, y = Fare, fill = factor(Pclass))) +
+  geom_boxplot() +
+  geom_hline(aes(yintercept=80), 
+    colour='red', linetype='dashed', lwd=2) +
+  scale_y_continuous(labels=dollar_format()) +
+  theme_few()
+```
+
+
+```{r}
+# Since their fare was $80 for 1st class, they most likely embarked from 'C'
+full$Embarked[c(62, 830)] <- 'C'
+```
+
+另外他也發現row 1044也有缺少票錢的資料，所以她也使用一樣的畫圖方法去比較，他從登陸地點S跟登陸班次推算出少的資料的價錢是8.05元，最後將資料補足。
+
+```{r, message=FALSE, warning=FALSE}
+# Show row 1044
+full[1044, ]
+```
+
+
+```{r, message=FALSE, warning=FALSE}
+ggplot(full[full$Pclass == '3' & full$Embarked == 'S', ], 
+  aes(x = Fare)) +
+  geom_density(fill = '#99d6ff', alpha=0.4) + 
+  geom_vline(aes(xintercept=median(Fare, na.rm=T)),
+    colour='red', linetype='dashed', lwd=1) +
+  scale_x_continuous(labels=dollar_format()) +
+  theme_few()
+```
+
+
+
+```{r}
+# Replace missing fare value with median fare for class/embarkment
+full$Fare[1044] <- median(full[full$Pclass == '3' & full$Embarked == 'S', ]$Fare, na.rm = TRUE)
+```
+
+## Predictive imputation
+
+現在作者要補齊消失的Age data，他使用mice package來幫助他，首先他先將變數收進一個集合之中，然後開始使用lapply迴圈，最後把它套進mice的model裡面，把圖畫出來，然後把得到的年齡資料套進去Full裏頭的age。
+
+```{r}
+# Show number of missing Age values
+sum(is.na(full$Age))
+```
+
+
+```{r, message=FALSE, warning=FALSE}
+# Make variables factors into factors
+factor_vars <- c('PassengerId','Pclass','Sex','Embarked',
+                 'Title','Surname','Family','FsizeD')
+
+full[factor_vars] <- lapply(full[factor_vars], function(x) as.factor(x))
+
+# Set a random seed
+set.seed(129)
+
+# Perform mice imputation, excluding certain less-than-useful variables:
+mice_mod <- mice(full[, !names(full) %in% c('PassengerId','Name','Ticket','Cabin','Family','Surname','Survived')], method='rf') 
+
+# Save the complete output 
+mice_output <- complete(mice_mod)
+```
+
+
+```{r}
+# Plot age distributions
+par(mfrow=c(1,2))
+hist(full$Age, freq=F, main='Age: Original Data', 
+  col='darkgreen', ylim=c(0,0.04))
+hist(mice_output$Age, freq=F, main='Age: MICE Output', 
+  col='lightgreen', ylim=c(0,0.04))
+```
+
+
+```{r}
+# Replace Age variable from the mice model.
+full$Age <- mice_output$Age
+
+# Show new number of missing Age values
+sum(is.na(full$Age))
+```
+
+
+## Feature Engineering: Round 2
+
+接下來作者要嘗試找出母親及小孩之間的關係，他先訂出幾個找尋的條件，小孩必須年齡<18，而母親則年齡必須>18，且是女生，有0以上的小孩，且沒有Miss的稱號。先用ggplot畫出年齡跟生存之間的關係圖，並把性別考慮進去。找出成人跟小孩的數據。似乎小孩與大人之間的生存狀況沒有差很多。
+
+```{r, message=FALSE, warning=FALSE}
+
+ggplot(full[1:891,], aes(Age, fill = factor(Survived))) + 
+  geom_histogram() + 
+  facet_grid(.~Sex) + 
+  theme_few()
+
+# Create the column child, and indicate whether child or adult
+full$Child[full$Age < 18] <- 'Child'
+full$Child[full$Age >= 18] <- 'Adult'
+
+# Show counts
+table(full$Child, full$Survived)
+```
+
+將前面為媽媽設定的條件，在這邊串聯再一起，找到媽媽以及非媽媽，觀察數據結果發現好像也沒有差很多。
+
+```{r}
+# Adding Mother variable
+full$Mother <- 'Not Mother'
+full$Mother[full$Sex == 'female' & full$Parch > 0 & full$Age > 18 & full$Title != 'Miss'] <- 'Mother'
+
+# Show counts
+table(full$Mother, full$Survived)
+
+# Finish by factorizing our two new factor variables
+full$Child  <- factor(full$Child)
+full$Mother <- factor(full$Mother)
+```
+
+
+```{r}
+md.pattern(full)
+```
+
+
+# Prediction
+
+
+## Split into training & test sets
+
+將資料先分成train set 跟 test set。
+
+```{r}
+# Split the data back into a train set and a test set
+train <- full[1:891,]
+test <- full[892:1309,]
+```
+
+## Building the model 
+
+作者用 `randomForest`  跟 training set做出自己的模型.
+
+```{r}
+# Set a random seed
+set.seed(754)
+
+# Build the model (note: not all possible variables are used)
+rf_model <- randomForest(factor(Survived) ~ Pclass + Sex + Age + SibSp + Parch + 
+                                            Fare + Embarked + Title + 
+                                            FsizeD + Child + Mother,
+                                            data = train)
+
+# Show model error
+plot(rf_model, ylim=c(0,0.36))
+legend('topright', colnames(rf_model$err.rate), col=1:3, fill=1:3)
+```
+
+而用顯示出來的這個圖，可以看出我們的錯誤率，目前黑線顯現的是所有的錯誤率，而紅線是死亡的，可以看出作者現在做出的模型目前對於死亡的預測率，比較精準。
+
+## Variable importance
+
+然後作者比較了其他變數與預測之間的關係，並用ggplot畫出來。
+
+```{r, message=FALSE, warning=FALSE}
+# Get importance
+importance    <- importance(rf_model)
+varImportance <- data.frame(Variables = row.names(importance), 
+                            Importance = round(importance[ ,'MeanDecreaseGini'],2))
+
+# Create a rank variable based on importance
+rankImportance <- varImportance %>%
+  mutate(Rank = paste0('#',dense_rank(desc(Importance))))
+
+# Use ggplot2 to visualize the relative importance of variables
+ggplot(rankImportance, aes(x = reorder(Variables, Importance), 
+    y = Importance, fill = Importance)) +
+  geom_bar(stat='identity') + 
+  geom_text(aes(x = Variables, y = 0.5, label = Rank),
+    hjust=0, vjust=0.55, size = 4, colour = 'red') +
+  labs(x = 'Variables') +
+  coord_flip() + 
+  theme_few()
+```
+
+
+## Prediction!
+
+最後隨之完成的就是作者的prediction model 了。
+
+```{r}
+# Predict using the test set
+prediction <- predict(rf_model, test)
+
+# Save the solution to a dataframe with two columns: PassengerId and Survived (prediction)
+solution <- data.frame(PassengerID = test$PassengerId, Survived = prediction)
+
+# Write the solution to file
+write.csv(solution, file = 'rf_mod_Solution.csv', row.names = F)
+```
+
+
+---
