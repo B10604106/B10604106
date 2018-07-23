@@ -151,6 +151,7 @@ full[c(62, 830), 'Embarked']
 cat(paste('We will infer their values for **embarkment** based on present data that we can imagine may be relevant: **passenger class** and **fare**. We see that they paid<b> $', full[c(62, 830), 'Fare'][[1]][1], '</b>and<b> $', full[c(62, 830), 'Fare'][[1]][2], '</b>respectively and their classes are<b>', full[c(62, 830), 'Pclass'][[1]][1], '</b>and<b>', full[c(62, 830), 'Pclass'][[1]][2], '</b>. So from where did they embark?'))
 ```
 
+
 ```{r, message=FALSE, warning=FALSE}
 # Get rid of our missing passenger IDs
 embark_fare <- full %>%
@@ -171,7 +172,7 @@ ggplot(embark_fare, aes(x = Embarked, y = Fare, fill = factor(Pclass))) +
 full$Embarked[c(62, 830)] <- 'C'
 ```
 
-另外他也發現row 1044也有缺少票錢的資料，所以她也使用一樣的畫圖方法去比較，他從登陸地點S跟登陸班次推算出少的資料的價錢是8.05元，最後將資料補足。
+##另外他也發現row 1044也有缺少票錢的資料，所以她也使用一樣的畫圖方法去比較，他從登陸地點S跟登陸班次推算出少的資料的價錢是8.05元，最後將資料補足。
 
 ```{r, message=FALSE, warning=FALSE}
 # Show row 1044
@@ -196,9 +197,9 @@ ggplot(full[full$Pclass == '3' & full$Embarked == 'S', ],
 full$Fare[1044] <- median(full[full$Pclass == '3' & full$Embarked == 'S', ]$Fare, na.rm = TRUE)
 ```
 
-## Predictive imputation
+# Predictive imputation
 
-現在作者要補齊消失的Age data，他使用mice package來幫助他，首先他先將變數收進一個集合之中，然後開始使用lapply迴圈，最後把它套進mice的model裡面，把圖畫出來，然後把得到的年齡資料套進去Full裏頭的age。
+##現在作者要補齊消失的Age data，他使用mice package來幫助他，首先他先將變數收進一個集合之中，然後開始使用lapply迴圈，最後把它套進mice的model裡面，把圖畫出來，然後把得到的年齡資料套進去Full裏頭的age。
 
 ```{r}
 # Show number of missing Age values
@@ -243,9 +244,9 @@ sum(is.na(full$Age))
 ```
 
 
-## Feature Engineering: Round 2
+# Feature Engineering: Round 2
 
-接下來作者要嘗試找出母親及小孩之間的關係，他先訂出幾個找尋的條件，小孩必須年齡<18，而母親則年齡必須>18，且是女生，有0以上的小孩，且沒有Miss的稱號。先用ggplot畫出年齡跟生存之間的關係圖，並把性別考慮進去。找出成人跟小孩的數據。似乎小孩與大人之間的生存狀況沒有差很多。
+##接下來作者要嘗試找出母親及小孩之間的關係，他先訂出幾個找尋的條件，小孩必須年齡<18，而母親則年齡必須>18，且是女生，有0以上的小孩，且沒有Miss的稱號。先用ggplot畫出年齡跟生存之間的關係圖，並把性別考慮進去。找出成人跟小孩的數據。似乎小孩與大人之間的生存狀況沒有差很多。
 
 ```{r, message=FALSE, warning=FALSE}
 
@@ -262,7 +263,7 @@ full$Child[full$Age >= 18] <- 'Adult'
 table(full$Child, full$Survived)
 ```
 
-將前面為媽媽設定的條件，在這邊串聯再一起，找到媽媽以及非媽媽，觀察數據結果發現好像也沒有差很多。
+##將前面為媽媽設定的條件，在這邊串聯再一起，找到媽媽以及非媽媽，觀察數據結果發現好像也沒有差很多。
 
 ```{r}
 # Adding Mother variable
@@ -288,7 +289,7 @@ md.pattern(full)
 
 ## Split into training & test sets
 
-將資料先分成train set 跟 test set。
+###將資料先分成train set 跟 test set。
 
 ```{r}
 # Split the data back into a train set and a test set
@@ -298,7 +299,7 @@ test <- full[892:1309,]
 
 ## Building the model 
 
-作者用 `randomForest`  跟 training set做出自己的模型.
+###作者用 `randomForest`  跟 training set做出自己的模型.
 
 ```{r}
 # Set a random seed
@@ -315,11 +316,11 @@ plot(rf_model, ylim=c(0,0.36))
 legend('topright', colnames(rf_model$err.rate), col=1:3, fill=1:3)
 ```
 
-而用顯示出來的這個圖，可以看出我們的錯誤率，目前黑線顯現的是所有的錯誤率，而紅線是死亡的，可以看出作者現在做出的模型目前對於死亡的預測率，比較精準。
+###而用顯示出來的這個圖，可以看出我們的錯誤率，目前黑線顯現的是所有的錯誤率，而紅線是死亡的，可以看出作者現在做出的模型目前對於死亡的預測率，比較精準。
 
 ## Variable importance
 
-然後作者比較了其他變數與預測之間的關係，並用ggplot畫出來。
+###然後作者比較了其他變數與預測之間的關係，並用ggplot畫出來。
 
 ```{r, message=FALSE, warning=FALSE}
 # Get importance
@@ -345,7 +346,7 @@ ggplot(rankImportance, aes(x = reorder(Variables, Importance),
 
 ## Prediction!
 
-最後隨之完成的就是作者的prediction model 了。
+###最後隨之完成的就是作者的prediction model 了。
 
 ```{r}
 # Predict using the test set
