@@ -24,7 +24,7 @@
  4. learning [中文文本探勘初探：TF-IDF in R Language](http://mropengate.blogspot.com/2016/04/tf-idf-in-r-language.html)
 ## week_3
  * School:
- 1. 上午的閱讀 [Kaggle Script作業](https://b10604106.github.io/B10604106/week3/script.html)
+ 1. 上午的註解 [Kaggle Script作業](https://b10604106.github.io/B10604106/week3/script.html)
  * Home
 ## week_4
  * School
