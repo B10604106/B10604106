@@ -25,6 +25,7 @@
 ## week_3
  * School:
  1. 上午的註解 [Kaggle Script作業](https://b10604106.github.io/B10604106/week3/script.html)
+ 2. 下午的作業 [TFIDF -> PCA -> K-means](https://b10604106.github.io/B10604106/week3/hw3_1_.html)
  * Home
 ## week_4
  * School
