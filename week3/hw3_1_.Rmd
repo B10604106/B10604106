@@ -1,0 +1,251 @@
+
+#開始資料整理
+##準備工具然後用網路爬蟲抓出PTT股票版所有文章的內文
+
+```{r}
+library(bitops)
+library(httr)
+library(RCurl)
+library(XML)
+library(tm)
+library(NLP)
+library(tmcn)
+library(jiebaRD)
+library(jiebaR)
+library(RColorBrewer)
+library(wordcloud)
+```
+
+```{r}
+library(xml2)
+library(tmcn)
+library(rvest)
+```
+
+#建立文本資料結構與基本文字清洗
+
+```{r}
+d.corpus <- Corpus( DirSource("./DATA") )
+d.corpus <- tm_map(d.corpus, removePunctuation)
+d.corpus <- tm_map(d.corpus, removeNumbers)
+d.corpus <- tm_map(d.corpus, stripWhitespace)
+d.corpus <- tm_map(d.corpus, function(word) {
+    gsub("[A-Za-z0-9]", "", word)
+})
+```
+
+#進行斷詞，並依照日期建立文本矩陣 TermDocumentMatrix
+
+```{r}
+mixseg = worker()
+jieba_tokenizer = function(d)
+{
+  unlist( segment(d[[1]], mixseg) )
+}
+seg = lapply(d.corpus, jieba_tokenizer)
+
+count_token = function(d)
+{
+  as.data.frame(table(d))
+}
+tokens = lapply(seg, count_token)
+
+n = length(seg)
+TDM = tokens[[1]]
+colNames <- names(seg)
+colNames <- gsub(".txt", "", colNames)
+for( id in c(2:n) )
+{
+  TDM = merge(TDM, tokens[[id]], by="d", all = TRUE)
+  names(TDM) = c('d', colNames[1:id])
+}
+TDM[is.na(TDM)] <- 0
+library(knitr)
+kable(head(TDM))
+kable(tail(TDM))
+```
+
+#將已建好的 TDM 轉成 TF-IDF
+
+```{r}
+tf <- apply(as.matrix(TDM[,2:(n+1)]), 2, sum)
+
+library(Matrix)
+idfCal <- function(word_doc)
+{ 
+  log2( n / nnzero(word_doc) ) 
+}
+idf <- apply(as.matrix(TDM[,2:(n+1)]), 1, idfCal)
+
+doc.tfidf <- TDM
+# for(x in 1:nrow(TDM))
+# {
+#   for(y in 2:ncol(TDM))
+#   {
+#     doc.tfidf[x,y] <- (doc.tfidf[x,y] / tf[y]) * idf[x]
+#   }
+# }
+
+tempY = matrix(rep(c(as.matrix(tf)), each = length(idf)), nrow = length(idf))
+tempX = matrix(rep(c(as.matrix(idf)), each = length(tf)), ncol = length(tf), byrow = TRUE)
+doc.tfidf[,2:(n+1)] <- (doc.tfidf[,2:(n+1)] / tempY) * tempX
+
+stopLine = rowSums(doc.tfidf[,2:(n+1)])
+delID = which(stopLine == 0)
+
+kable(head(doc.tfidf[delID,1]))
+kable(tail(doc.tfidf[delID,1]))
+
+
+TDM = TDM[-delID,]
+doc.tfidf = doc.tfidf[-delID,]
+```
+
+```{r}
+kable(tail(doc.tfidf[delID,1]))
+```
+
+```{r}
+TDM = TDM[-delID,]
+doc.tfidf = doc.tfidf[-delID,]
+```
+
+#TF-IDF Hours 文章取得的重要關鍵字
+
+```{r}
+TopWords = data.frame()
+for( id in c(1:n) )
+{
+  dayMax = order(doc.tfidf[,id+1], decreasing = TRUE)
+  showResult = t(as.data.frame(doc.tfidf[dayMax[1:5],1]))
+  TopWords = rbind(TopWords, showResult)
+}
+rownames(TopWords) = colnames(doc.tfidf)[2:(n+1)]
+TopWords = droplevels(TopWords)
+kable(TopWords)
+```
+
+#TF-IDF Hours 文章取得的重要關鍵字 TDM merge 視覺化
+
+```{r}
+TDM$d = as.character(TDM$d)
+AllTop = as.data.frame( table(as.matrix(TopWords)) )
+AllTop = AllTop[order(AllTop$Freq, decreasing = TRUE),]
+
+kable(head(AllTop))
+```
+
+```{r}
+TopNo = 5
+tempGraph = data.frame()
+for( t in c(1:TopNo) )
+{
+  word = matrix( rep(c(as.matrix(AllTop$Var1[t])), each = n), nrow = n )
+  temp = cbind( colnames(doc.tfidf)[2:(n+1)], t(TDM[which(TDM$d == AllTop$Var1[t]), 2:(n+1)]), word )
+  colnames(temp) = c("hour", "freq", "words")
+  tempGraph = rbind(tempGraph, temp)
+  names(tempGraph) = c("hour", "freq", "words")
+}
+
+library(ggplot2)
+```
+
+```{r}
+library(varhandle)
+tempGraph$freq = unfactor(tempGraph$freq)
+ggplot(tempGraph, aes(hour, freq)) + 
+  geom_point(aes(color = words, shape = words), size = 5) +
+  geom_line(aes(group = words, linetype = words))
+```
+
+```{r}
+kable(tail(AllTop))
+```
+
+#發文時間與發文量
+
+```{r}
+filenames = as.array(paste0("./DATA/",colnames(doc.tfidf)[2:(n+1)],".txt"))
+sizeResult = apply(filenames, 1, file.size) / 1024
+showSize = data.frame(colnames(doc.tfidf)[2:(n+1)], sizeResult)
+names(showSize) = c("hour", "size_KB")
+
+ggplot(showSize, aes(x = hour, y = size_KB)) + geom_bar(stat="identity")
+```
+
+#PCA (Principal Component Analysis)
+
+```{r}
+library(devtools)
+install_github("ggbiplot", "vqv")
+```
+
+```{r}
+library(scales)
+library(grid)
+library(ggbiplot)
+```
+
+```{r}
+t = as.data.frame(t(doc.tfidf))
+t=t[-1,]
+
+t=apply(t,2,as.numeric)
+t=apply(t,1,as.numeric)
+
+pcat=prcomp(t)
+g <- ggbiplot(pcat, obs.scale = 1, var.scale = 1, ellipse = TRUE, circle = TRUE)
+```
+
+```{r}
+library(factoextra)
+```
+
+```{r}
+library(Matrix)
+
+fviz_eig(pcat)
+```
+
+```{r}
+fviz_pca_ind(pcat, geom.ind = c("point"), col.ind = "cos2")
+```
+
+```{r}
+fviz_pca_var(pcat, col.var = "contrib")
+```
+
+```{r}
+fviz_pca_biplot(pcat, geom.ind = "point")
+```
+
+#PCA results
+
+```{r}
+docs.eig <- get_eig(pcat)
+docs.var <- get_pca_var(pcat)
+docs.ind <- get_pca_ind(pcat)
+```
+
+#Kmeans
+
+```{r}
+kmeansData=pcat$rotation[,1:2]
+cl <- kmeans(kmeansData,2)
+plot(kmeansData, col = cl$cluster)
+points(cl$centers, col = 1:2, pch = 8, cex = 2)
+ind.coord2 <- docs.ind$coord[, 1:2]
+wss <- c()
+for (i in 1:10) { wss[i] <- kmeans(ind.coord2, i)$tot.withinss }
+plot(wss, type = "b")
+```
+
+#Kmeans Clustering
+
+```{r}
+km <- kmeans(ind.coord2, 3)
+plot(ind.coord2, col = km$cluster)
+points(km$centers, col = 1:3, pch = 8, cex = 2)
+```
+
+#   所以由圖案以及表格我們可以開始進一步的分析，首先看我們的重要關鍵字裏頭有疫苗、面板、特斯拉、電競以及一百萬，先撇開一百萬部說，很明顯的其他四個都跟某些特定公司有關，因為我目前沒有其他使用程式分析的能力，所以我只能以自己有的知識下去看待這些，疫苗目前可以說是一個很大的議題，中國大陸被爆料出有假疫苗，所以可能間接影響股市，還有一些生醫公司。另外面板相關也是台灣股市的大宗，討論熱度一直都很高，而特斯拉則是比較特別的，他跟台股關係較小，主要是美股的部分，至於一百萬，似乎是有人在板上詢問如果有一百萬如何運用?引起了廣大的回響。另外我們可以注意到，發文與時間量，早上八點是發文的大宗，那是開盤前一個小時，而收盤的後一小時，兩點的時候也是討論度較高的時候，證明了台灣股民喜歡在開盤前一小時，收盤後一小時，以及晚上依些零星的時間討論。
