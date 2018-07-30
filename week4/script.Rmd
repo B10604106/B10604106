@@ -1,17 +1,4 @@
----
-title: 'Exploring the Titanic Dataset'
-author: '原作者:Megan L. Risdal'
-
-output:
-  html_document:
-    number_sections: true
-    toc: true
-    fig_width: 7
-    fig_height: 4.5
-    theme: readable
-    highlight: tango
----
-
+#week4的work在最下面
 # 原作者的Introduction
 
 This is my first stab at a Kaggle script. I have chosen to work with the Titanic dataset after spending some time poking around on the site and looking at other scripts made by other Kagglers for inspiration. I will also focus on doing some illustrative data visualizations along the way. I'll then use `randomForest` to create a model predicting survival on the Titanic. I am new to machine learning and hoping to learn a lot, so feedback is very welcome! 
@@ -39,8 +26,8 @@ Now that our packages are loaded, let's read in and take a peek at the data.
 
 #然後再用函數read.csv()找到我們train 跟 test的資料，並打他們用bind_rows合併成full，再用str()來確認full的檔案形式。
 ```{r, message=FALSE, warning=FALSE}
-train <- read.csv('../week3/all/train.csv', stringsAsFactors = F)
-test  <- read.csv('../week3/all/test.csv', stringsAsFactors = F)
+train <- read.csv('../week4/all/train.csv', stringsAsFactors = F)
+test  <- read.csv('../week4/all/test.csv', stringsAsFactors = F)
 
 full  <- bind_rows(train, test) # bind training & test data
 
@@ -359,6 +346,99 @@ solution <- data.frame(PassengerID = test$PassengerId, Survived = prediction)
 write.csv(solution, file = 'rf_mod_Solution.csv', row.names = F)
 ```
 
------------------------------------------------------------------------
+-----
+#week4的功課
+#首先先將資料合併完整
+
+```{r}
+gender  <- read.csv('../week4/all/gender_submission.csv', stringsAsFactors = F)
+first <- merge(test, gender, by = "PassengerId")
+full2 <- bind_rows(train, first)
+```
+
+```{r}
+full2$Survived <- as.factor(full2$Survived)
+```
+
+```{r}
+ggplot(data = full2, aes(x = Survived, y = Fare)) +
+ geom_boxplot() + coord_flip() +
+ labs( y = 'Fare', x = 'Survived', 
+       title = 'Mathematical Score Box')
+```
+```{r}
+full3<-na.omit(full2)
+```
+
+```{r}
+#以下函式計算95%信賴區間
+with(full3, 
+     tapply(Fare, Survived,
+     function(x) 
+       c(mean(x) + c(-2, 2) * sd(x)/sqrt(length(x)))))
+```
+
+```{r}
+t.test(Fare ~ Survived, data = full3)
+```
+
+```{r}
+t.test(Fare ~ Survived, data = full3, var.equal = TRUE)
+```
+
+```{r}
+library(Hmisc)
+```
+
+#part b
+
+查看登陸地點跟票價關係
+Port of Embarkation  C = Cherbourg, Q = Queenstown, S = Southampton
+
+```{r}
+full3$Embarked <- as.factor(full3$Embarked)
+```
+
+```{r}
+#先把父母教育欄位內各個水準順序定下來(order of factors)
+full3$Embarked <- factor(full3$Embarked, 
+                       levels = c('C',
+                                  'Q',
+                                  'S'
+                              ))
+
+#看不同父母教育程度下的數學分數平均數
+tapply(full3$Fare, full3$Embarked, mean)
+```
+
+
+```{r}
+#同父母教育程度下的數學分數平均數，加上信賴區間
+ggplot(data = full3, 
+       aes(x = Embarked, y = Fare)) +
+  stat_summary(fun.data = 'mean_cl_boot', size = 1) +
+  scale_y_continuous(breaks = seq(500, 660, by = 20)) +
+  geom_hline(yintercept = mean(full3$Fare) , 
+             linetype = 'dotted') +
+  labs(x = '登陸地點', y = '票價平均') +
+  coord_flip()
+```
+
+```{r}
+anova(m1 <- lm(Fare ~ Embarked, data = full3))
+ggplot(data = full3, 
+       aes(group = Embarked, 
+          y = Fare, x = Embarked)) +
+  geom_point() +
+  stat_smooth(method = 'lm', se = F) +
+  stat_smooth(aes(group = Embarked, 
+          y = Fare, x = Age), 
+          method = 'lm', se = F) + 
+  facet_grid( . ~  Embarked) +
+  labs(x = '年齡', y = '票價')
+```
+
+
+
 
 ---

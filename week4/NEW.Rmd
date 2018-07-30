@@ -1,0 +1,116 @@
+#week4的功課
+#首先先將我們前幾個禮拜的Titanic資料夾打開，並將資料合併完整，因為我們發現裏頭資料有些不完整，所以我們要將test跟gender扣在一起，然後再把train跟first黏在一起。
+```{r}
+library(dplyr)
+gender  <- read.csv('../week4/all/gender_submission.csv', stringsAsFactors = F)
+test  <- read.csv('../week4/all/test.csv', stringsAsFactors = F)
+train <- read.csv('../week4/all/train.csv', stringsAsFactors = F)
+first <- merge(test, gender, by = "PassengerId")
+full2 <- bind_rows(train, first)
+```
+
+
+#然後將full2選取Survived並將其中的數值轉成factor形式。
+```{r}
+full2$Survived <- as.factor(full2$Survived)
+```
+
+
+#接下來這個步驟我們是將活著的人所花的票錢，跟罹難的人的票錢各自做了盒鬚圖，我們可以從圖看出來，罹難的人的票錢跟存活的人的票錢實際上是有差距的。可以證實之前有一個說法是，因為票錢較貴的艙等，船艙會越上層，所以當水滲進船艙的時候，較低價位的船艙會先被水滲入。所以生存率比較低。
+```{r}
+library(ggplot2)
+ggplot(data = full2, aes(x = Survived, y = Fare)) +
+ geom_boxplot() + coord_flip() +
+ labs( y = 'Fare', x = 'Survived', 
+       title = 'Mathematical Score Box')
+```
+
+
+#full3是我們用來削掉full2檔案中的Na。為的是要讓我們下面的函數可以繼續運行。
+```{r}
+full3<-na.omit(full2)
+```
+
+
+#可以透過下面的函數看出來兩種狀況的人，他們的平均票價不一樣。
+```{r}
+#以下函式計算95%信賴區間
+with(full3, 
+     tapply(Fare, Survived,
+     function(x) 
+       c(mean(x) + c(-2, 2) * sd(x)/sqrt(length(x)))))
+```
+
+
+
+```{r}
+t.test(Fare ~ Survived, data = full3)
+```
+
+```{r}
+t.test(Fare ~ Survived, data = full3, var.equal = TRUE)
+```
+
+```{r}
+library(Hmisc)
+```
+
+#part b
+
+#查看登陸地點跟票價關係
+#Port of Embarkation  C = Cherbourg, Q = Queenstown, S = Southampton
+
+```{r}
+full3$Embarked <- as.factor(full3$Embarked)
+```
+
+```{r}
+#先把登陸地點定下來(order of factors)
+full3$Embarked <- factor(full3$Embarked, 
+                       levels = c('C',
+                                  'Q',
+                                  'S'
+                              ))
+
+#然後看一下個地點他們的平均票價
+tapply(full3$Fare, full3$Embarked, mean)
+```
+
+#然後我們發現從C上船的人票價比較高，再來是S，再來是Q。可以推測出C地區也就是 C = Cherbourg 的人，他們可能較為富有，也就是這艘船大部分的倖存者。
+
+```{r}
+ggplot(data = full3, 
+       aes(x = Embarked, y = Fare)) +
+  stat_summary(fun.data = 'mean_cl_boot', size = 1) +
+  scale_y_continuous(breaks = seq(500, 660, by = 20)) +
+  geom_hline(yintercept = mean(full3$Fare) , 
+             linetype = 'dotted') +
+  labs(x = '登陸地點', y = '票價平均') +
+  coord_flip()
+```
+
+
+#這個步驟是想要去除full3裡面Age的NA，雖然前面有去除過Na了，但是不知怎麼地好像沒有成功，結果加了這個步驟過後，好像沒有成功....
+```{r}
+full3$Age<-na.omit(full3$Age)
+```
+
+
+#我們繼續畫圖，試著找出他們與年齡間的正相關，結果發現只有C地區比較有關連性，其他的都偏差，很不幸的這份資料似乎難以使用老師教的方法，因為其他欄位，也無法取得關聯性，故這個只能做到這個步驟。
+```{r}
+anova(m1 <- lm(Fare ~ Embarked, data = full3))
+ggplot(data = full3, 
+       aes(group = Embarked, 
+          y = Fare, x = Age)) +
+  geom_point() +
+  stat_smooth(method = 'lm', se = F) +
+  stat_smooth(aes(group = Embarked, 
+          y = Fare, x = Age), 
+          method = 'lm', se = F) + 
+  facet_grid( . ~  Embarked) +
+  labs(x = '年齡', y = '票價')
+```
+
+
+#所以透過這份資料，我們只能知道，生存機率跟票價有關，然後也跟登陸地點有關係。
+
