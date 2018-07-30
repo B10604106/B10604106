@@ -25,10 +25,14 @@
 ## week_3
  * School:
  1. 上午的註解 [Kaggle Script作業](https://b10604106.github.io/B10604106/week3/script.html)
+ 2. 下午的作業 [TFIDF -> PCA -> K-means](https://b10604106.github.io/B10604106/week3/hw3_1_.html)
  * Home
 ## week_4
- * School
- * Home
+ * School:
+ 1.【上午】延續第三週 EDA 內容，對資料進行更深度的 EDA
+ 2.【下午】對已 EDA 資料提出問題，透過迴歸分析獲取可能答案
+ * Home:
+ 1. practice [New](https://b10604106.github.io/B10604106/week4/NEW.html)
 ## week_5
  * School
  * Home
