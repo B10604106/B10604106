@@ -113,3 +113,178 @@ ggplot(data = full3,
 
 
 #透過這份資料，我們只能知道，生存機率跟票價有關，然後也跟登陸地點有關係。
+
+
+#那我們嘗試繼續做下去，用ANOVA繼續做下去
+```{r}
+anova(m2 <- update(m1, . ~ . + 
+            Age, data = full3))
+
+```
+```{r}
+anova(m3 <- update(m2, . ~ . - Embarked,  data = full3))
+```
+
+#將 ANOVA 結果做成圖表輸出，先計算一些需要的數據
+
+```{r}
+res_lm <- lapply(list(m1, m2, m3), summary)
+(res_lm[[2]]$r.sq - res_lm[[3]]$r.sq)/res_lm[[2]]$r.sq
+```
+
+
+```{r}
+#為了消掉無法互相比較的項目
+m2 <- update(m3, .~.-cyl, data=na.omit(full3[ , all.vars(formula(m3))]))
+anova(m3, m2)
+```
+
+
+```{r}
+(res_lm[[2]]$r.sq - res_lm[[1]]$r.sq)/res_lm[[1]]$r.sq
+```
+
+```{r}
+m1 <- update(m3, .~.-cyl, data=na.omit(full3[ , all.vars(formula(m3))]))
+anova(m1, m2)
+```
+
+#正式畫圖
+```{r}
+require(coefplot)
+m2 <- lm(Fare ~ Embarked+Age- 1, 
+         data = full3)
+coefplot(m2, xlab = '估計值', ylab = '迴歸變項', title = '反應變項 = Fare')
+```
+
+```{r}
+full3 <- na.exclude(full3)
+fit_m2 <- data.frame(full3[, c(6, 10, 12)], fitted = fitted(m2), resid = resid(m2),
+                     infl = influence(m2)$hat )
+```
+
+
+#依登陸地點疊合真實觀測值與預測值
+```{r}
+ggplot(data = fit_m2, aes(x = Fare, group = Embarked )) +
+ stat_density(geom = 'path', position = 'identity') +
+ stat_density(geom = 'path', position = 'identity', aes(x = fitted)) +
+ geom_vline(xintercept = c(with(full3, tapply(Fare,Embarked, mean))), linetype = 'dotted')+
+ facet_grid(Embarked ~ .) +
+ scale_x_continuous(breaks = seq(200, 900, by = 100))+
+ labs(x = '票錢', y = '機率密度')
+```
+
+#看殘差分配，依登陸地點，檢視常態與變異數同質假設
+```{r}
+ggplot(data = fit_m2, aes(x = scale(resid)), group = Embarked ) +
+ stat_density(geom = 'path', position = 'identity', aes(linetype = Embarked)) +
+ scale_linetype_manual(values = 5:1) +
+ guides(linetype = guide_legend(reverse = TRUE)) +
+ labs(x = '標準化殘差', y = '機率密度') +
+ theme(legend.position = c(.15, .8))
+```
+
+#看看殘差的 Q-Q 圖，依登陸地點。檢視常態假設
+
+```{r}
+require(lattice)
+qqmath(~ scale(resid) | Embarked, data = fit_m2, type = c('p', 'g', 'r'),
+       xlab = '常態位數', ylab = '標準化殘差', layout = c(2, 3),
+       pch = '.', cex = 2)
+```
+
+#畫預測值與殘差的散佈圖，檢查線性與等分散假設
+
+```{r}
+require(MASS)
+ggplot(data = fit_m2, aes(x = fitted, y = scale(resid), group = Embarked )) +
+  geom_point(pch = 20, size = 1) +
+  stat_smooth(method = 'rlm', se = F) +
+  facet_grid(Embarked ~ .) +
+  labs(x = '數學預測值', y = '標準化殘差')
+```
+
+#呈現影響值（影響估計結果過大的值）與標準化殘差
+```{r}
+ggplot(data = fit_m2, aes(x = infl, y = scale(resid), group = Embarked)) +
+ geom_text(aes(label = rownames(fit_m2)), cex = 2) +
+ geom_hline(yintercept = 0, linetype = 'dotted') +
+ facet_grid(Embarked ~ .) +
+ labs(x = '影響值', y = '標準化殘差')
+```
+
+#看看影響值
+
+```{r}
+summary(influence(m2)$hat)
+```
+
+
+#Part C. 接下來分析資料集當中的其他變項是否和票錢有關
+
+```{r}
+full3_Fare <- full3[, c('Fare', 'Pclass', 
+                    'Survived', 'SibSp')]
+```
+
+#將前面轉乘Factor的項目轉回numeric
+```{r}
+full3_Fare$Survived <- as.numeric(full3_Fare$Survived)
+```
+
+```{r}
+colMeans(full3_Fare)
+```
+
+#呈現兩兩散佈圖
+```{r}
+require(heplots)
+scatterplotMatrix(~ Fare + Pclass + Survived + SibSp, data= full3_Fare,
+  pch = '.', cex = 3, smooth = FALSE, reg.line = FALSE, ellipse = TRUE,
+  diagonal = 'none', lower.panel = NULL)
+```
+
+
+#我們利用corrplot 套件，以圖形顯示相關性的大小
+```{r}
+require(corrplot)
+corrplot(cor(full3_Fare), method = 'ellipse', order = 'hclust', addrect = 4,
+         type = 'upper', tl.pos = 'tp')
+corrplot(cor(full3_Fare), add = TRUE, type = 'lower', method = 'number',
+         order = 'hclust', col = 'black', diag = FALSE, tl.pos = 'n', cl.pos = 'n')
+```
+
+
+
+```{r}
+summary(m4 <- lm(Fare ~ Survived + Pclass + SibSp, data = full3_Fare))
+```
+
+
+#結果
+```{r}
+coefplot(m4, predictors = c('Survived', 'Pclass', 
+                            'Sibsup'),
+ xlab = '估計值', ylab = '迴歸變項(去除截距)', title = '反應變項是票價')
+```
+
+```{r}
+require(effects)
+plot(allEffects(m4), main = '', ylim = c(550, 670), grid = T)
+```
+
+#利用 lm.beta 套件，計算標準化迴歸係數
+```{r}
+library(lm.beta)
+summary(lm.beta(m4))
+```
+
+#看看控制存活與登陸班次後，SibSp的效果
+```{r}
+summary(m5 <- update(m4, . ~ . - SibSp , data = full3_Fare))
+```
+
+```{r}
+anova(m5, m4)
+```
