@@ -35,7 +35,8 @@
  1. practice [New](https://b10604106.github.io/B10604106/week4/NEW.html)
 ## week_5
  * School
- * Home
+ * Home:
+ 1.[期末報告](https://cmtest.shinyapps.io/week5/)
 ## week_6
  * School
  * Home
